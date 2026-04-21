@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SurvivalHUD">
+<meta name="theme-color" content="#000000">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Survival AR Compass</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Courier New',monospace;}
+#wrap{position:fixed;inset:0;}
+video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.scanlines{position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(to bottom,transparent 0,transparent 3px,rgba(0,255,180,.008) 3px,rgba(0,255,180,.008) 4px);}
+
+/* TAPE */
+#tape-wrap{width:100%;overflow:hidden;position:relative;height:52px;}
+#tape{display:flex;align-items:flex-start;position:absolute;top:0;height:52px;will-change:transform;}
+.tick{display:inline-flex;flex-direction:column;align-items:center;width:13px;flex-shrink:0;}
+.tl{width:1.5px;}
+.tl.maj{height:22px;background:#00ffb4;}
+.tl.sem{height:13px;background:rgba(0,255,180,.7);}
+.tl.min{height:7px;background:rgba(0,255,180,.35);}
+.tl.xs{height:4px;background:rgba(0,255,180,.18);}
+.tlb{font-size:7.5px;color:#00ffb4;margin-top:2px;font-weight:700;letter-spacing:.3px;height:11px;line-height:11px;white-space:nowrap;}
+#ptr{position:absolute;top:0;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;pointer-events:none;}
+#ptr-tri{width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:12px solid #fff;}
+#ptr-line{width:2px;height:40px;background:rgba(255,255,255,.7);}
+
+/* CORNERS */
+.cor{position:absolute;width:22px;height:22px;}
+.cor.tl{top:10px;left:10px;border-top:2px solid rgba(0,255,180,.7);border-left:2px solid rgba(0,255,180,.7);}
+.cor.tr{top:10px;right:10px;border-top:2px solid rgba(0,255,180,.7);border-right:2px solid rgba(0,255,180,.7);}
+.cor.bl{bottom:10px;left:10px;border-bottom:2px solid rgba(0,255,180,.7);border-left:2px solid rgba(0,255,180,.7);}
+.cor.br{bottom:10px;right:10px;border-bottom:2px solid rgba(0,255,180,.7);border-right:2px solid rgba(0,255,180,.7);}
+
+/* CROSSHAIR */
+#xhair{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:80px;height:80px;pointer-events:none;}
+.xh{position:absolute;top:50%;left:0;right:0;height:1px;background:rgba(0,255,180,.35);transform:translateY(-50%);}
+.xv{position:absolute;left:50%;top:0;bottom:0;width:1px;background:rgba(0,255,180,.35);transform:translateX(-50%);}
+.xring{position:absolute;top:50%;left:50%;width:24px;height:24px;border:1px solid rgba(0,255,180,.35);border-radius:50%;transform:translate(-50%,-50%);}
+.xdot{position:absolute;top:50%;left:50%;width:4px;height:4px;background:#00ffb4;border-radius:50%;transform:translate(-50%,-50%);}
+
+/* HORIZON LINE */
+#horizon{position:absolute;left:0;right:0;height:1px;background:rgba(0,255,180,.5);pointer-events:none;transition:top .1s;}
+#horizon::before{content:'';position:absolute;left:50%;top:-8px;transform:translateX(-50%);font-size:8px;color:#00ffb4;}
+
+/* OVERLAY */
+#overlay{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:space-between;padding:14px 0 max(env(safe-area-inset-bottom),16px);pointer-events:none;}
+
+/* TOP: tape + degree box */
+#top-section{display:flex;flex-direction:column;align-items:center;gap:6px;}
+#dbox{background:rgba(0,0,0,.55);border:1px solid rgba(0,255,180,.5);padding:6px 28px 8px;border-radius:4px;text-align:center;}
+#dnum{font-size:48px;color:#fff;font-weight:700;letter-spacing:3px;line-height:1;}
+#dlbl{font-size:17px;color:#00ffb4;letter-spacing:7px;margin-top:2px;}
+
+/* INCLINOMETER */
+#incline-bar{width:160px;height:6px;background:rgba(0,0,0,.5);border:1px solid rgba(0,255,180,.3);border-radius:3px;position:relative;margin:4px auto 0;}
+#incline-fill{position:absolute;top:0;height:100%;background:#00ffb4;border-radius:3px;transition:width .2s,left .2s;}
+#incline-label{font-size:10px;color:rgba(0,255,180,.8);text-align:center;margin-top:2px;letter-spacing:1px;}
+
+/* LEFT PANEL */
+#left-panel{position:absolute;left:10px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px;pointer-events:all;}
+/* RIGHT PANEL */
+#right-panel{position:absolute;right:10px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px;pointer-events:all;}
+
+.hud-box{background:rgba(0,0,0,.55);border:1px solid rgba(0,255,180,.35);border-radius:4px;padding:5px 10px;text-align:center;min-width:72px;cursor:pointer;}
+.hud-box:active{background:rgba(0,255,180,.1);}
+.hud-lbl{font-size:7px;color:rgba(0,255,180,.55);letter-spacing:1.5px;display:block;margin-bottom:1px;}
+.hud-val{font-size:18px;color:#fff;font-weight:700;letter-spacing:1px;display:block;line-height:1.1;}
+.hud-unit{font-size:7px;color:rgba(0,255,180,.55);letter-spacing:1px;}
+
+/* MAGNETIC SCANNER */
+#mag-box{background:rgba(0,0,0,.6);border:1px solid rgba(0,255,180,.35);border-radius:4px;padding:5px 10px;text-align:center;min-width:72px;}
+.mag-bar-wrap{width:54px;height:4px;background:rgba(0,0,0,.5);border:1px solid rgba(0,255,180,.25);border-radius:2px;margin:3px auto;}
+#mag-bar{height:100%;width:0%;border-radius:2px;background:#00ffb4;transition:width .15s,background .15s;}
+#mag-val{font-size:14px;color:#fff;font-weight:700;}
+#mag-alert{font-size:7px;color:#ff6060;letter-spacing:1px;height:9px;}
+
+/* BOTTOM */
+#bottom-section{display:flex;flex-direction:column;align-items:center;gap:6px;padding:0 12px;}
+#speed-row{display:flex;gap:8px;justify-content:center;}
+#status-row{display:flex;justify-content:space-between;width:100%;}
+.st{font-size:9px;color:rgba(0,255,180,.6);letter-spacing:1px;}
+
+/* CONTROLS */
+#controls{display:flex;gap:8px;justify-content:center;}
+.ctrl-btn{background:rgba(0,0,0,.55);border:1px solid rgba(0,255,180,.4);color:#00ffb4;font-size:8px;letter-spacing:1px;padding:5px 10px;border-radius:3px;cursor:pointer;font-family:'Courier New',monospace;pointer-events:all;}
+.ctrl-btn:active{background:rgba(0,255,180,.15);}
+.ctrl-btn.active{border-color:#ff6060;color:#ff6060;}
+
+/* BEEP indicator */
+#beep-dot{width:6px;height:6px;border-radius:50%;background:#ff6060;display:inline-block;margin-left:4px;opacity:0;}
+
+/* PERMISSION SCREEN */
+#perm{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.95);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:30px;}
+#perm h1{color:#00ffb4;font-size:14px;letter-spacing:4px;text-align:center;}
+#perm p{color:rgba(0,255,180,.6);font-size:11px;text-align:center;line-height:1.8;letter-spacing:.8px;max-width:280px;}
+#pbtn{background:transparent;border:1px solid #00ffb4;color:#00ffb4;padding:13px 38px;font-size:12px;letter-spacing:3px;cursor:pointer;font-family:'Courier New',monospace;border-radius:2px;}
+#pbtn:active{background:rgba(0,255,180,.1);}
+#perr{display:none;color:#ff6060;font-size:10px;text-align:center;line-height:1.7;letter-spacing:.8px;max-width:280px;}
+
+/* NO CAM overlay */
+#nocam{position:absolute;inset:0;background:#000;display:none;z-index:1;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <video id="vid" autoplay playsinline muted></video>
+  <div id="nocam"></div>
+  <div class="scanlines"></div>
+  <div class="cor tl"></div><div class="cor tr"></div>
+  <div class="cor bl"></div><div class="cor br"></div>
+  <div id="xhair"><div class="xh"></div><div class="xv"></div><div class="xring"></div><div class="xdot"></div></div>
+  <div id="horizon"></div>
+
+  <!-- LEFT PANEL -->
+  <div id="left-panel">
+    <div class="hud-box" onclick="toggleAlt()">
+      <span class="hud-lbl">ALTITUDE</span>
+      <span class="hud-val" id="alt-val">--</span>
+      <span class="hud-unit" id="alt-unit">m</span>
+    </div>
+    <div class="hud-box" onclick="toggleTemp()">
+      <span class="hud-lbl">TEMP</span>
+      <span class="hud-val" id="temp-val">--</span>
+      <span class="hud-unit" id="temp-unit">°C</span>
+    </div>
+    <div id="mag-box">
+      <span class="hud-lbl">MAGNETIC</span>
+      <span class="hud-val" id="mag-val">--</span>
+      <span class="hud-unit">μT</span>
+      <div class="mag-bar-wrap"><div id="mag-bar"></div></div>
+      <div id="mag-alert"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div id="right-panel">
+    <div class="hud-box" onclick="toggleSpeed()">
+      <span class="hud-lbl">SPEED</span>
+      <span class="hud-val" id="spd-val">--</span>
+      <span class="hud-unit" id="spd-unit">km/h</span>
+    </div>
+    <div class="hud-box">
+      <span class="hud-lbl">INCLINE</span>
+      <span class="hud-val" id="inc-val">--</span>
+      <span class="hud-unit">°</span>
+    </div>
+    <div class="hud-box">
+      <span class="hud-lbl">MAG NOTE</span>
+      <span style="font-size:7px;color:rgba(0,255,180,.45);line-height:1.4;display:block;margin-top:2px;">5–15cm<br>depth</span>
+    </div>
+  </div>
+
+  <div id="overlay">
+    <!-- TOP -->
+    <div id="top-section">
+      <div style="position:relative;width:100%;">
+        <div id="tape-wrap"><div id="tape"></div></div>
+        <div id="ptr"><div id="ptr-tri"></div><div id="ptr-line"></div></div>
+      </div>
+      <div id="dbox">
+        <div id="dnum">000°</div>
+        <div id="dlbl">N</div>
+      </div>
+      <div>
+        <div id="incline-bar"><div id="incline-fill"></div></div>
+        <div id="incline-label">HORIZON: LEVEL</div>
+      </div>
+    </div>
+
+    <!-- BOTTOM -->
+    <div id="bottom-section">
+      <div id="controls">
+        <button class="ctrl-btn" onclick="toggleCam()" id="cam-btn">📷 CAM OFF</button>
+        <button class="ctrl-btn" onclick="calibrateMag()" id="cal-btn">⊕ CALIBRATE</button>
+        <button class="ctrl-btn" onclick="toggleBeep()" id="beep-btn">🔔 BEEP<span id="beep-dot"></span></button>
+      </div>
+      <div id="status-row">
+        <span class="st" id="sl">COMPASS: --</span>
+        <span class="st" id="sm">◉ 00:00</span>
+        <span class="st" id="sr">GPS: --</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="perm">
+  <h1>SURVIVAL AR HUD</h1>
+  <p>Requires camera, compass,<br>gyroscope, magnetometer<br>and GPS access.</p>
+  <button id="pbtn" onclick="startApp()">► INITIALIZE</button>
+  <p id="perr"></p>
+  <p style="font-size:9px;color:rgba(0,255,180,.3);margin-top:10px;letter-spacing:.5px">v3.0 — Survival Edition</p>
+</div>
+
+<script>
+const DIRS=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+const D8={0:'N',45:'NE',90:'E',135:'SE',180:'S',225:'SW',270:'W',315:'NW'};
+const PX=13;
+const SMOOTH=0.07;
+
+let heading=0,target=0;
+let headingBuffer=[];
+const BUF=10;
+
+// Unit toggles
+let altFt=false,tempF=false,spdMph=false;
+let altM=null,tempC=null,spdKmh=null;
+
+// Camera
+let camOn=true,camStream=null;
+
+// Magnetic
+let magBaseline=null,beepOn=false,beepInterval=null,lastBeepRate=0;
+let audioCtx=null;
+
+// Incline
+let pitch=0;
+
+function buildTape(){
+  const t=document.getElementById('tape');
+  t.innerHTML='';
+  for(let d=-360;d<=720;d++){
+    const norm=((d%360)+360)%360;
+    const tick=document.createElement('div');
+    tick.className='tick';
+    const line=document.createElement('div');
+    const lbl=document.createElement('div');
+    lbl.className='tlb';
+    if(norm%45===0){line.className='tl maj';lbl.textContent=D8[norm]||'';}
+    else if(norm%10===0){line.className='tl sem';lbl.textContent=String(norm).padStart(3,'0');}
+    else if(norm%5===0){line.className='tl min';}
+    else{line.className='tl xs';}
+    tick.appendChild(line);tick.appendChild(lbl);t.appendChild(tick);
+  }
+}
+
+function updateTape(h){
+  const ww=document.getElementById('tape-wrap').offsetWidth;
+  const offset=360*PX+h*PX;
+  document.getElementById('tape').style.transform=`translateX(${ww/2-offset-PX/2}px)`;
+  document.getElementById('dnum').textContent=String(Math.round(h)).padStart(3,'0')+'°';
+  document.getElementById('dlbl').textContent=DIRS[Math.round(h/22.5)%16];
+}
+
+function circularMean(angles){
+  let s=0,c=0;
+  for(const a of angles){s+=Math.sin(a*Math.PI/180);c+=Math.cos(a*Math.PI/180);}
+  let m=Math.atan2(s/angles.length,c/angles.length)*180/Math.PI;
+  return m<0?m+360:m;
+}
+
+function loop(){
+  let diff=target-heading;
+  if(diff>180)diff-=360;if(diff<-180)diff+=360;
+  heading+=diff*SMOOTH;
+  if(heading<0)heading+=360;if(heading>=360)heading-=360;
+  updateTape(heading);
+  requestAnimationFrame(loop);
+}
+
+function onOrient(e){
+  let a=e.alpha;
+  if(a==null)return;
+  if(typeof e.webkitCompassHeading==='number')a=e.webkitCompassHeading;
+  else a=(360-a)%360;
+
+  headingBuffer.push(a);
+  if(headingBuffer.length>BUF)headingBuffer.shift();
+  target=circularMean(headingBuffer);
+
+  // Pitch for inclinometer (beta = front-back tilt)
+  if(e.beta!=null){
+    pitch=e.beta;
+    updateIncline(pitch);
+  }
+
+  document.getElementById('sl').textContent='COMPASS: OK';
+}
+
+function updateIncline(p){
+  // p is -180 to 180, 0 = flat, 90 = upright
+  const angle=Math.round(p);
+  document.getElementById('inc-val').textContent=angle;
+
+  // Bar: center = level
+  const bar=document.getElementById('incline-fill');
+  const pct=Math.min(Math.abs(p)/90,1)*50;
+  if(p>0){bar.style.left='50%';bar.style.width=pct+'%';}
+  else{bar.style.left=(50-pct)+'%';bar.style.width=pct+'%';}
+
+  // Horizon line
+  const wh=window.innerHeight;
+  const hpos=wh/2+(p/90)*(wh*0.25);
+  document.getElementById('horizon').style.top=Math.max(50,Math.min(wh-50,hpos))+'px';
+
+  const lbl=Math.abs(angle)<3?'HORIZON: LEVEL':`HORIZON: ${angle>0?'FORWARD':'BACKWARD'} ${Math.abs(angle)}°`;
+  document.getElementById('incline-label').textContent=lbl;
+}
+
+// Magnetometer
+function onMag(e){
+  const x=e.x||0,y=e.y||0,z=e.z||0;
+  const strength=Math.sqrt(x*x+y*y+z*z);
+  const base=magBaseline||strength;
+  const delta=Math.abs(strength-base);
+
+  document.getElementById('mag-val').textContent=Math.round(strength);
+
+  // Bar 0-100μT range
+  const pct=Math.min(strength/150*100,100);
+  const bar=document.getElementById('mag-bar');
+  bar.style.width=pct+'%';
+
+  // Alert zones
+  const alert=document.getElementById('mag-alert');
+  if(delta>30){bar.style.background='#ff3030';alert.textContent='⚠ METAL DETECTED';}
+  else if(delta>15){bar.style.background='#ffaa00';alert.textContent='△ FIELD ANOMALY';}
+  else{bar.style.background='#00ffb4';alert.textContent='';}
+
+  // Beep rate
+  if(beepOn&&delta>10){
+    const rate=Math.max(100,800-delta*15);
+    if(Math.abs(rate-lastBeepRate)>50){setBeepRate(rate);lastBeepRate=rate;}
+  }
+}
+
+function calibrateMag(){
+  // Re-read current as baseline
+  magBaseline=null;
+  const btn=document.getElementById('cal-btn');
+  btn.textContent='⊕ CALIBRATED';
+  setTimeout(()=>btn.textContent='⊕ CALIBRATE',2000);
+  // Force next reading to set baseline
+  const handler=e=>{
+    const x=e.x||0,y=e.y||0,z=e.z||0;
+    magBaseline=Math.sqrt(x*x+y*y+z*z);
+    window.removeEventListener('devicemotion',handler);
+  };
+  window.addEventListener('devicemotion',handler);
+}
+
+function onMotion(e){
+  const mag=e.rotationRate;
+  // Use magnetometer from DeviceMotionEvent if available
+  // Main mag data comes from DeviceOrientationEvent with magnetometer
+}
+
+// Separate magnetometer via DeviceOrientationEvent absolute
+let magListener=null;
+function startMagnetometer(){
+  // Try to get magnetometer via absolute orientation
+  if(window.DeviceOrientationEvent){
+    magListener=e=>{
+      // webkitCompassAccuracy gives field info on some devices
+      if(e.webkitCompassAccuracy!=null&&e.webkitCompassAccuracy>0){
+        document.getElementById('mag-val').textContent='~'+Math.round(e.webkitCompassAccuracy*10);
+      }
+    };
+    window.addEventListener('deviceorientationabsolute',magListener);
+  }
+  // Try Sensor API for real magnetometer
+  if(window.Magnetometer){
+    try{
+      const sensor=new Magnetometer({frequency:10});
+      sensor.addEventListener('reading',()=>{
+        const strength=Math.sqrt(sensor.x**2+sensor.y**2+sensor.z**2);
+        const base=magBaseline||strength;
+        const delta=Math.abs(strength-base);
+        document.getElementById('mag-val').textContent=Math.round(strength);
+        const pct=Math.min(strength/150*100,100);
+        const bar=document.getElementById('mag-bar');
+        bar.style.width=pct+'%';
+        const alert=document.getElementById('mag-alert');
+        if(delta>30){bar.style.background='#ff3030';alert.textContent='⚠ METAL DETECTED';}
+        else if(delta>15){bar.style.background='#ffaa00';alert.textContent='△ FIELD ANOMALY';}
+        else{bar.style.background='#00ffb4';alert.textContent='';}
+        if(beepOn&&delta>10){const rate=Math.max(100,800-delta*15);if(Math.abs(rate-lastBeepRate)>50){setBeepRate(rate);lastBeepRate=rate;}}
+        if(!magBaseline)magBaseline=strength;
+      });
+      sensor.start();
+    }catch(err){}
+  }
+}
+
+// Beep
+function toggleBeep(){
+  beepOn=!beepOn;
+  const btn=document.getElementById('beep-btn');
+  const dot=document.getElementById('beep-dot');
+  if(beepOn){
+    btn.classList.add('active');
+    dot.style.opacity='1';
+    if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  }else{
+    btn.classList.remove('active');
+    dot.style.opacity='0';
+    if(beepInterval){clearInterval(beepInterval);beepInterval=null;}
+  }
+}
+
+function setBeepRate(ms){
+  if(beepInterval)clearInterval(beepInterval);
+  beepInterval=setInterval(()=>beep(),ms);
+}
+
+function beep(){
+  if(!audioCtx)return;
+  const osc=audioCtx.createOscillator();
+  const gain=audioCtx.createGain();
+  osc.connect(gain);gain.connect(audioCtx.destination);
+  osc.frequency.value=880;
+  gain.gain.setValueAtTime(.3,audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+.08);
+  osc.start();osc.stop(audioCtx.currentTime+.08);
+}
+
+// Camera toggle
+function toggleCam(){
+  camOn=!camOn;
+  document.getElementById('nocam').style.display=camOn?'none':'block';
+  document.getElementById('cam-btn').textContent=camOn?'📷 CAM OFF':'📷 CAM ON';
+  if(camStream){
+    camStream.getTracks().forEach(t=>t.enabled=camOn);
+  }
+}
+
+// Unit toggles
+function toggleAlt(){
+  if(altM===null)return;
+  altFt=!altFt;
+  document.getElementById('alt-unit').textContent=altFt?'ft':'m';
+  document.getElementById('alt-val').textContent=altFt?Math.round(altM*3.28084):Math.round(altM);
+}
+function toggleTemp(){
+  if(tempC===null)return;
+  tempF=!tempF;
+  document.getElementById('temp-unit').textContent=tempF?'°F':'°C';
+  document.getElementById('temp-val').textContent=tempF?Math.round(tempC*9/5+32):Math.round(tempC);
+}
+function toggleSpeed(){
+  if(spdKmh===null)return;
+  spdMph=!spdMph;
+  document.getElementById('spd-unit').textContent=spdMph?'mph':'km/h';
+  document.getElementById('spd-val').textContent=spdMph?Math.round(spdKmh*0.621371):Math.round(spdKmh);
+}
+
+// GPS
+function startGPS(){
+  if(!navigator.geolocation)return;
+  navigator.geolocation.watchPosition(pos=>{
+    // Altitude
+    if(pos.coords.altitude!=null){
+      altM=pos.coords.altitude;
+      document.getElementById('alt-val').textContent=altFt?Math.round(altM*3.28084):Math.round(altM);
+      document.getElementById('alt-unit').textContent=altFt?'ft':'m';
+    }
+    // Speed
+    if(pos.coords.speed!=null){
+      spdKmh=pos.coords.speed*3.6;
+      document.getElementById('spd-val').textContent=spdMph?Math.round(spdKmh*0.621371):Math.round(spdKmh);
+      document.getElementById('spd-unit').textContent=spdMph?'mph':'km/h';
+    }
+    document.getElementById('sr').textContent='GPS: OK';
+  },()=>{document.getElementById('sr').textContent='GPS: --';},{enableHighAccuracy:true,maximumAge:3000});
+}
+
+// Temperature
+async function fetchTemp(){
+  try{
+    const pos=await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{timeout:8000}));
+    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${pos.coords.latitude.toFixed(4)}&longitude=${pos.coords.longitude.toFixed(4)}&current_weather=true`);
+    const d=await r.json();
+    if(d.current_weather){
+      tempC=d.current_weather.temperature;
+      document.getElementById('temp-val').textContent=tempF?Math.round(tempC*9/5+32):Math.round(tempC);
+      document.getElementById('temp-unit').textContent=tempF?'°F':'°C';
+    }
+  }catch(e){}
+}
+
+// Clock
+let secs=0;
+setInterval(()=>{
+  secs++;
+  const m=String(Math.floor(secs/60)).padStart(2,'0');
+  const s=String(secs%60).padStart(2,'0');
+  document.getElementById('sm').textContent='◉ '+m+':'+s;
+},1000);
+
+async function startApp(){
+  const btn=document.getElementById('pbtn');
+  const err=document.getElementById('perr');
+  btn.textContent='Initializing...';
+  btn.disabled=true;
+
+  // Camera
+  try{
+    camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920}},audio:false});
+    document.getElementById('vid').srcObject=camStream;
+  }catch(e){
+    err.style.display='block';
+    err.textContent='Camera unavailable. All sensors still active.';
+  }
+
+  // Compass + Gyro (DeviceOrientation)
+  let hasOrient=false;
+  if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'){
+    try{
+      const p=await DeviceOrientationEvent.requestPermission();
+      if(p==='granted'){
+        window.addEventListener('deviceorientationabsolute',onOrient,true);
+        window.addEventListener('deviceorientation',onOrient,true);
+        hasOrient=true;
+      }
+    }catch(e){}
+  }else if(typeof DeviceOrientationEvent!=='undefined'){
+    window.addEventListener('deviceorientationabsolute',onOrient,true);
+    window.addEventListener('deviceorientation',onOrient,true);
+    hasOrient=true;
+  }
+
+  if(!hasOrient){
+    document.getElementById('sl').textContent='COMPASS: SIM';
+    let sim=0;
+    setInterval(()=>{sim=(sim+0.3)%360;target=sim;},50);
+  }
+
+  startMagnetometer();
+  startGPS();
+  fetchTemp();
+  setInterval(fetchTemp,300000);
+  buildTape();
+  loop();
+  document.getElementById('perm').style.display='none';
+}
+
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
