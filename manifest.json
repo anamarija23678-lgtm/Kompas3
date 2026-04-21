@@ -9,7 +9,10 @@
   "background_color": "#000000",
   "theme_color": "#00ffb4",
   "lang": "en",
-  "categories": ["navigation", "utilities"],
+  "categories": [
+    "navigation",
+    "utilities"
+  ],
   "icons": [
     {
       "src": "/kompas3/icon-192.png",
@@ -23,5 +26,6 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "id": "Survival AR HUD"
 }
