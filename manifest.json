@@ -1,8 +1,8 @@
 {
   "name": "Survival AR HUD",
   "short_name": "SurvivalHUD",
-  "description": "Augmented reality kompas sa kamerom",
-  "start_url": "./index.html",
+  "description": "AR Survival Compas with camera",
+  "start_url": "/kompas3",
   "display": "fullscreen",
   "orientation": "portrait",
   "background_color": "#000000",
