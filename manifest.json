@@ -1,38 +1,14 @@
 {
-  "name": "Survival AR HUD",
-  "short_name": "SurvivalHUD",
-  "description": "AR Survival Compass with camera, gyroscope and magnetometer",
-  "start_url": "/kompas3/index.html",
-  "scope": "/kompas3/",
-  "display": "fullscreen",
+  "background_color": "#ca1c1c",
+  "dir": "ltr",
+  "display": "standalone",
+  "name": "anamarija23678-lgtm.github",
   "orientation": "any",
-  "background_color": "#000000",
-  "theme_color": "#00ffb4",
-  "lang": "en",
-  "categories": [
-    "navigation",
-    "utilities"
-  ],
-  "icons": [
-    {
-      "src": "/kompas3/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/kompas3/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
-  ],
+  "scope": "/",
+  "short_name": "anamarija23678-lgtm.github",
+  "start_url": "/",
+  "theme_color": "#b51c1c",
   "id": "Survival AR HUD",
-  "dir": "auto",
-  "display_override": [
-    "standalone",
-    "window-controls-overlay"
-  ],
-  "iarc_rating_id": "Survival AR HUD",
+  "description": "Survival AR HUD",
   "prefer_related_applications": true
 }
