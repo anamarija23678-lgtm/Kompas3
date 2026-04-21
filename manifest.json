@@ -1,14 +1,11 @@
 {
-  "background_color": "#ca1c1c",
+  "background_color": "#ffffff",
   "dir": "ltr",
   "display": "standalone",
   "name": "anamarija23678-lgtm.github",
   "orientation": "any",
   "scope": "/",
   "short_name": "anamarija23678-lgtm.github",
-  "start_url": "/",
-  "theme_color": "#b51c1c",
-  "id": "Survival AR HUD",
-  "description": "Survival AR HUD",
-  "prefer_related_applications": true
+  "start_url": "/https://anamarija23678-lgtm.github.io/Kompas3/",
+  "theme_color": "#ffffff"
 }
