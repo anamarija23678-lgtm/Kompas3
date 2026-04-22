@@ -13,7 +13,7 @@
   "categories": ["navigation", "utilities"],
   "icons": [
     {
-      "src": "https://anamarija23678-lgtm.github.io/kompas3/icon-192.png,
+      "src": "https://anamarija23678-lgtm.github.io/Kompas3/icon-192.png,
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
@@ -25,7 +25,7 @@
       "purpose": "maskable"
     },
     {
-      "src": "https://anamarija23678-lgtm.github.io/kompas3/icon-512.png,
+      "src": "https://anamarija23678-lgtm.github.io/Kompas3/icon-512.png,
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
