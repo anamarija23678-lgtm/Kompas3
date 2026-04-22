@@ -1,11 +1,40 @@
 {
-  "background_color": "#ffffff",
-  "dir": "ltr",
-  "display": "standalone",
-  "name": "anamarija23678-lgtm.github",
-  "orientation": "any",
-  "scope": "/",
-  "short_name": "anamarija23678-lgtm.github",
-  "start_url": "/https://anamarija23678-lgtm.github.io/Kompas3/",
-  "theme_color": "#ffffff"
+  "name": "Survival AR HUD",
+  "short_name": "SurvivalHUD",
+  "description": "AR Survival Compass with camera, gyroscope and magnetometer",
+  "id": "survival-ar-hud",
+  "start_url": "/kompas3/index.html",
+  "scope": "/kompas3/",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#000000",
+  "theme_color": "#00ffb4",
+  "lang": "en-US",
+  "categories": ["navigation", "utilities"],
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
 }
